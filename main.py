@@ -1,15 +1,18 @@
 import os
 import re
 import argparse
+import tempfile
+
 from pdf2image import convert_from_path
 from PyPDF2 import PdfReader
 from fpdf import FPDF
 from PIL import Image
-import tempfile
 
-# Set up argument parser
+pdf_size = 'A3'
+
+
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Convert PDF pages to images and arrange them in a grid PDF with optional cropping.")
+    parser = argparse.ArgumentParser( description="Convert PDF pages to images and arrange them in a grid PDF with optional cropping.")
     parser.add_argument('input', type=str, help='Path to the input PDF file.')
     parser.add_argument('--crop_top_offset', type=int, default=0, help='Offset to crop from the top of the image (default: 0).')
     parser.add_argument('--crop_left_offset', type=int, default=0, help='Offset to crop from the left of the image (default: 0).')
@@ -22,18 +25,20 @@ def parse_arguments():
     parser.add_argument('--output', type=str, default=None, help='Output path for the generated PDF (default: input_filename_grid.pdf).')
     return parser.parse_args()
 
-# Set output filename
+
 def set_output_filename(input_path, output_filename):
     if output_filename is None:
         input_filename = os.path.splitext(os.path.basename(input_path))[0]
-        return f"Result_{input_filename}.pdf"
+        return f"{pdf_size}_{input_filename}.pdf"
     return output_filename
+
 
 def clean_filename(text, max_length=50):
     """Clean and limit the text to be used in filenames."""
     text = re.sub(r'[^\w\s]', '', text)  # Remove non-alphanumeric characters
     text = re.sub(r'\s+', '_', text)  # Replace spaces with underscores
     return text[:max_length]  # Limit filename length
+
 
 def crop_image(image, crop_top_offset, crop_left_offset):
     """Crop the image to a square based on specified offsets."""
@@ -47,15 +52,17 @@ def crop_image(image, crop_top_offset, crop_left_offset):
 
     return image.crop((left, upper, right, lower))
 
+
 def extract_text_from_pdf(input_path):
     """Extract text from each page of the PDF."""
     reader = PdfReader(input_path)
     page_texts = [page.extract_text() for page in reader.pages]
     return page_texts
 
+
 def create_pdf(images, output_path):
     """Create a PDF file with images arranged in a grid."""
-    pdf = FPDF(unit='pt', format='A3')
+    pdf = FPDF(unit='pt', format=pdf_size)
     pdf.add_page()
 
     x_offset = args.padding_left
@@ -94,6 +101,7 @@ def create_pdf(images, output_path):
     pdf.output(output_path)
     print(f"PDF saved as {output_path}")
 
+
 def pdf_to_images(input_path, crop_top_offset, crop_left_offset):
     """Convert PDF pages to images and create a grid in a PDF."""
     images = convert_from_path(input_path)
@@ -102,13 +110,16 @@ def pdf_to_images(input_path, crop_top_offset, crop_left_offset):
 
     for image, text in zip(images, page_texts):
         cropped_image = crop_image(image, crop_top_offset, crop_left_offset)
-        sanitized_text = clean_filename(text.strip() or "page")  # Use sanitized text or fallback to "page"
+        # Use sanitized text or fallback to "page"
+        sanitized_text = clean_filename(text.strip() or "page")
         cropped_images.append((cropped_image, sanitized_text))
 
     # Sort cropped images by the sanitized filename
-    cropped_images.sort(key=lambda x: x[1])  # Sort by the second item in the tuple (sanitized filename)
+    # Sort by the second item in the tuple (sanitized filename)
+    cropped_images.sort(key=lambda x: x[1])
 
     return cropped_images
+
 
 if __name__ == "__main__":
     args = parse_arguments()

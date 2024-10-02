@@ -26,7 +26,7 @@ def parse_arguments():
 def set_output_filename(input_path, output_filename):
     if output_filename is None:
         input_filename = os.path.splitext(os.path.basename(input_path))[0]
-        return f"{input_filename}_grid.pdf"
+        return f"Result_{input_filename}.pdf"
     return output_filename
 
 def clean_filename(text, max_length=50):
@@ -47,6 +47,12 @@ def crop_image(image, crop_top_offset, crop_left_offset):
 
     return image.crop((left, upper, right, lower))
 
+def extract_text_from_pdf(input_path):
+    """Extract text from each page of the PDF."""
+    reader = PdfReader(input_path)
+    page_texts = [page.extract_text() for page in reader.pages]
+    return page_texts
+
 def create_pdf(images, output_path):
     """Create a PDF file with images arranged in a grid."""
     pdf = FPDF(unit='pt', format='A3')
@@ -57,7 +63,7 @@ def create_pdf(images, output_path):
     current_row = 0
     current_col = 0  # Track the current column index
 
-    for image in images:
+    for image, _ in images:  # We don't need the filename here, just the image
         with tempfile.NamedTemporaryFile(delete=True, suffix='.png') as temp_image_file:
             image.save(temp_image_file, format='PNG')
             temp_image_file.seek(0)
@@ -91,7 +97,17 @@ def create_pdf(images, output_path):
 def pdf_to_images(input_path, crop_top_offset, crop_left_offset):
     """Convert PDF pages to images and create a grid in a PDF."""
     images = convert_from_path(input_path)
-    cropped_images = [crop_image(image, crop_top_offset, crop_left_offset) for image in images]
+    page_texts = extract_text_from_pdf(input_path)
+    cropped_images = []
+
+    for image, text in zip(images, page_texts):
+        cropped_image = crop_image(image, crop_top_offset, crop_left_offset)
+        sanitized_text = clean_filename(text.strip() or "page")  # Use sanitized text or fallback to "page"
+        cropped_images.append((cropped_image, sanitized_text))
+
+    # Sort cropped images by the sanitized filename
+    cropped_images.sort(key=lambda x: x[1])  # Sort by the second item in the tuple (sanitized filename)
+
     return cropped_images
 
 if __name__ == "__main__":

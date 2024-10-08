@@ -12,7 +12,7 @@ pdf_size = 'A3'
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser( description="Convert PDF pages to images and arrange them in a grid PDF with optional cropping.")
+    parser = argparse.ArgumentParser(description='Convert PDF pages to images and arrange them in a grid PDF with optional cropping.')
     parser.add_argument('input', type=str, help='Path to the input PDF file.')
     parser.add_argument('--crop_top_offset', type=int, default=0, help='Offset to crop from the top of the image (default: 0).')
     parser.add_argument('--crop_left_offset', type=int, default=0, help='Offset to crop from the left of the image (default: 0).')
@@ -29,7 +29,7 @@ def parse_arguments():
 def set_output_filename(input_path, output_filename):
     if output_filename is None:
         input_filename = os.path.splitext(os.path.basename(input_path))[0]
-        return f"{pdf_size}_{input_filename}.pdf"
+        return f'{pdf_size}_{input_filename}.pdf'
     return output_filename
 
 
@@ -64,6 +64,9 @@ def create_pdf(images, output_path):
     """Create a PDF file with images arranged in a grid."""
     pdf = FPDF(unit='pt', format=pdf_size)
     pdf.add_page()
+
+    # Set metadata
+    pdf.set_creator('Linggar Juwita - linggarjuwita@gmail.com')
 
     x_offset = args.padding_left
     y_offset = args.padding_top
@@ -111,7 +114,7 @@ def pdf_to_images(input_path, crop_top_offset, crop_left_offset):
     for image, text in zip(images, page_texts):
         cropped_image = crop_image(image, crop_top_offset, crop_left_offset)
         # Use sanitized text or fallback to "page"
-        sanitized_text = clean_filename(text.strip() or "page")
+        sanitized_text = clean_filename(text.strip() or 'page')
         cropped_images.append((cropped_image, sanitized_text))
 
     # Sort cropped images by the sanitized filename
@@ -121,7 +124,7 @@ def pdf_to_images(input_path, crop_top_offset, crop_left_offset):
     return cropped_images
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     args = parse_arguments()
     args.output = set_output_filename(args.input, args.output)
     cropped_images = pdf_to_images(args.input, args.crop_top_offset, args.crop_left_offset)
